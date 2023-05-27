@@ -1,0 +1,3 @@
+/home/zmy/code/project /db_sqlite/cmake-build-debug/CMakeFiles/db_sqlite.dir
+/home/zmy/code/project /db_sqlite/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/zmy/code/project /db_sqlite/cmake-build-debug/CMakeFiles/rebuild_cache.dir
