@@ -51,8 +51,14 @@ typedef struct {
     Row row_to_insert;
 }Statement;
 typedef struct {
+    int file_descriptor;
+    u_int32_t file_length;
+    void* pages[TABLE_MAX_PAGES];
+}Pager;
+typedef struct {
     u_int32_t num_rows;
-    void * pages[TABLE_MAX_PAGES];
+//    void * pages[TABLE_MAX_PAGES];
+    Pager* pager;
 }Table;
 //TODO 常量值定义
 //表结构常量
@@ -72,7 +78,7 @@ InputBuffer * new_input_buffer();
 void print_prompt();
 void read_input(InputBuffer*inputBuffer);
 void close_input_buffer(InputBuffer* InputBuffer);
-MetaCommandResult do_meta_command(InputBuffer* inputBuffer);
+MetaCommandResult do_meta_command(InputBuffer* inputBuffer,Table* table);
 PrepareResult prepare_insert(InputBuffer* inputBuffer,Statement* statement);
 PrepareResult prepare_statement(InputBuffer* inputBuffer,Statement* statement);
 ExecuteResult execute_insert(Statement*statement,Table*table);
@@ -81,9 +87,13 @@ ExecuteResult execute_statement(Statement* statement,Table*table);
 void serialize_row(Row* source,void*destination);
 void deserialize_row(void*source,Row*destination);
 void * row_slot(Table* table,u_int32_t row_num);
-Table* new_table();
-void free_table(Table* table);
+Table* db_open(const char* filename);
+void pager_flush(Pager*pager,u_int32_t page_num,u_int32_t size);
+void db_close(Table* table);
+Pager* pager_open(const char* filename);
+void* get_page(Pager* pager,u_int32_t page_num);
 void print_row(Row* row);
+
 //TODO 函数定义
 InputBuffer * new_input_buffer(){
     InputBuffer *inputBuffer=(InputBuffer*)malloc(sizeof (InputBuffer));
@@ -115,8 +125,9 @@ void close_input_buffer(InputBuffer* InputBuffer){
     free(InputBuffer);
 }
 //解析命令
-MetaCommandResult do_meta_command(InputBuffer* inputBuffer){
+MetaCommandResult do_meta_command(InputBuffer* inputBuffer,Table* table){
     if(strcmp(inputBuffer->buffer,".exit")==0){
+        db_close(table);
         exit(EXIT_SUCCESS);
     }else{
         return META_COMMAND_UNRECOGNIZED_COMMAND;
@@ -189,8 +200,8 @@ ExecuteResult execute_statement(Statement* statement,Table* table){
 //序列化存储函数
 void serialize_row(Row* source,void*destination){
     memcpy(destination+ID_OFFSET,&(source->id),ID_SIZE);
-    memcpy(destination+USERNAME_OFFSET,&(source->username),USERNAME_SIZE);
-    memcpy(destination+EMAIL_OFFSET,&(source->email),EMAIL_SIZE);
+    strncpy(destination+USERNAME_OFFSET,source->username,USERNAME_SIZE);
+    strncpy(destination+EMAIL_OFFSET,source->email,EMAIL_SIZE);
 }
 //反序列化函数
 void deserialize_row(void*source,Row*destination){
@@ -201,40 +212,136 @@ void deserialize_row(void*source,Row*destination){
 // 计算row在page中的存储位置
 void * row_slot(Table* table,u_int32_t row_num){
     u_int32_t page_num=row_num/ROWS_PER_PAGE;
-    void* page=table->pages[page_num];
-    if(page==NULL){
-        page=table->pages[page_num] = malloc(PAGE_SIZE);
-    }
+    void* page= get_page(table->pager,page_num);
     u_int32_t row_offset=row_num%ROWS_PER_PAGE;
     u_int32_t byte_offset=row_offset*ROW_SIZE;
     return page+byte_offset;
 }
-//创建新table
-Table* new_table(){
-    Table* table=(Table*) malloc(sizeof(Table));
-    table->num_rows=0;
-    for(u_int32_t i=0;i<TABLE_MAX_PAGES;i++){
-        table->pages[i]=NULL;
-    }
-    return table;
+
+//从文件中读取储存的数据库信息
+Table* db_open(const char* filename){
+    Pager* pager=pager_open(filename);
+    u_int32_t num_rows=pager->file_length/ROW_SIZE;
+    Table* table= malloc(sizeof(Table));
+    table->pager=pager;
+    table->num_rows=num_rows;
 }
-//释放table
-void free_table(Table* table){
-    for(u_int32_t i=0;table->pages[i];i++){
-        free(table->pages[i]);
+//关闭数据库，写回数据，释放内存
+void db_close(Table* table){
+    Pager* pager=table->pager;
+    u_int32_t num_full_pages=table->num_rows/ROWS_PER_PAGE;
+    //写回数据
+    for(u_int32_t i=0;i<num_full_pages;i++){
+        if(pager->pages[i]==NULL){
+            continue;
+        }
+        pager_flush(pager,i,PAGE_SIZE);
+        free(pager->pages[i]);
+        pager->pages[i]=NULL;
     }
+    u_int32_t num_additional_row=table->num_rows%ROWS_PER_PAGE;
+    if(num_additional_row>0){
+        if(pager->pages[num_full_pages]!=NULL){
+            pager_flush(pager,num_full_pages,num_additional_row*ROW_SIZE);
+            free(pager->pages[num_full_pages]);
+            pager->pages[num_full_pages]=NULL;
+        }
+    }
+    //关闭文件
+    int result= close(pager->file_descriptor);
+    if(result==-1){
+        printf("Error close file.\n");
+        exit(EXIT_FAILURE);
+    }
+    //释放空缓存的空间
+    for(u_int32_t i=0;i<TABLE_MAX_PAGES;i++){
+        void* page=pager->pages[i];
+        if(page){
+            free(page);
+            pager->pages[i]=NULL;
+        }
+    }
+    free(pager);
     free(table);
+}
+//将某一页的内容写入内存
+void pager_flush(Pager*pager,u_int32_t page_num,u_int32_t size){
+    if(pager->pages[page_num]==NULL){
+        printf("Tried to flush null page.\n");
+        exit(EXIT_FAILURE);
+    }
+    off_t offset= lseek(pager->file_descriptor,page_num*PAGE_SIZE,SEEK_SET);
+    if(offset==-1){
+        printf("Error seeking:%d\n",errno);
+        exit(EXIT_FAILURE);
+    }
+    ssize_t bytes_written= write(pager->file_descriptor,pager->pages[page_num],size);
+    if(bytes_written==-1){
+        printf("Error writing:%d\n",errno);
+        exit(EXIT_FAILURE);
+    }
+
+}
+//从文件中读取数据，初始化pager
+Pager* pager_open(const char* filename){
+    // O_RDWR Read/Write mode
+    // O_CREAT Create file if it does not exist
+    // S_IWUSR User write permission
+    // S_IRUSR User read permission
+    int fd= open(filename,O_RDWR|O_CREAT,S_IWUSR|S_IRUSR);
+    if(fd==-1){
+        printf("Unable to open file.\n");
+        exit(EXIT_FAILURE);
+    }
+    off_t file_length= lseek(fd,0,SEEK_END);
+    Pager* pager= malloc(sizeof(Pager));
+    pager->file_descriptor=fd;
+    pager->file_length=file_length;
+    for(u_int32_t i=0;i<TABLE_MAX_PAGES;i++){
+        pager->pages[i]=NULL;
+    }
+    return pager;
+}
+//从pager中获取page_num对应的page
+void* get_page(Pager* pager,u_int32_t page_num){
+    //Cache缓存，用时才读入数据到内存
+    if(page_num>=TABLE_MAX_PAGES){
+        printf("Tried to fetch page number out of bounds.\n");
+        exit(EXIT_FAILURE);
+    }
+    if(pager->pages[page_num]==NULL){
+        void* page= malloc(sizeof(PAGE_SIZE));
+        u_int32_t num_pages=pager->file_length/PAGE_SIZE;
+        if(pager->file_length%PAGE_SIZE){
+            num_pages+=1;
+        }
+        if(page_num<=num_pages){
+            lseek(pager->file_descriptor,page_num*PAGE_SIZE,SEEK_SET);
+            ssize_t bytes_read= read(pager->file_descriptor,page,PAGE_SIZE);
+            if(bytes_read==-1){
+                printf("Error reading file.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        pager->pages[page_num]=page;
+    }
+    return pager->pages[page_num];
 }
 //TODO main
 int main(int argc,char*argv[]) {
-    Table* table=new_table();
+    if(argc<2){
+        printf("Must supply a database filename.\n");
+        exit(EXIT_FAILURE);
+    }
+    char* filename=argv[1];
+    Table* table = db_open(filename);
     InputBuffer* input_buffer=new_input_buffer();
     while(true){
         print_prompt();
         read_input(input_buffer);
         //检查是否是退出之类的元指令
         if(input_buffer->buffer[0] == '.'){
-            switch (do_meta_command(input_buffer)) {
+            switch (do_meta_command(input_buffer,table)) {
                 case META_COMMAND_SUCCESS:
                     continue;
                 case META_COMMAND_UNRECOGNIZED_COMMAND:
