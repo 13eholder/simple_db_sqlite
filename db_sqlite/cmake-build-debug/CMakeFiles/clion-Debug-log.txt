@@ -1,4 +1,0 @@
-/root/.cache/JetBrains/RemoteDev/dist/0fc4707d65ca8_CLion-232.6095.18/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/root/.cache/JetBrains/RemoteDev/dist/0fc4707d65ca8_CLion-232.6095.18/bin/ninja/linux/x64/ninja -G Ninja -S "/home/zmy/code/project /db_sqlite" -B "/home/zmy/code/project /db_sqlite/cmake-build-debug"
--- Configuring done
--- Generating done
--- Build files have been written to: /home/zmy/code/project /db_sqlite/cmake-build-debug

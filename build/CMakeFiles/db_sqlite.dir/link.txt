@@ -1,0 +1,1 @@
+/usr/bin/gcc -g   CMakeFiles/db_sqlite.dir/main.c.o  -o db_sqlite 

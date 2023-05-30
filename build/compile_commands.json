@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/zmy/code/project /db_sqlite/build",
+  "command": "/usr/bin/gcc   -g   -std=gnu99 -o CMakeFiles/db_sqlite.dir/main.c.o   -c \"/home/zmy/code/project /db_sqlite/main.c\"",
+  "file": "/home/zmy/code/project /db_sqlite/main.c"
+}
+]
