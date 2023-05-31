@@ -44,10 +44,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/home/zmy/code/project /db_sqlite"
+CMAKE_SOURCE_DIR = /home/zmy/code/project/db_sqlite
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/home/zmy/code/project /db_sqlite/build"
+CMAKE_BINARY_DIR = /home/zmy/code/project/db_sqlite/build
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -74,14 +74,14 @@ clean: CMakeFiles/db_sqlite.dir/clean
 CMakeFiles/db_sqlite.dir/all:
 	$(MAKE) -f CMakeFiles/db_sqlite.dir/build.make CMakeFiles/db_sqlite.dir/depend
 	$(MAKE) -f CMakeFiles/db_sqlite.dir/build.make CMakeFiles/db_sqlite.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir="/home/zmy/code/project /db_sqlite/build/CMakeFiles" --progress-num=1,2 "Built target db_sqlite"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/zmy/code/project/db_sqlite/build/CMakeFiles --progress-num=1,2 "Built target db_sqlite"
 .PHONY : CMakeFiles/db_sqlite.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/db_sqlite.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/zmy/code/project /db_sqlite/build/CMakeFiles" 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/zmy/code/project/db_sqlite/build/CMakeFiles 2
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/db_sqlite.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/zmy/code/project /db_sqlite/build/CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/zmy/code/project/db_sqlite/build/CMakeFiles 0
 .PHONY : CMakeFiles/db_sqlite.dir/rule
 
 # Convenience name for target.

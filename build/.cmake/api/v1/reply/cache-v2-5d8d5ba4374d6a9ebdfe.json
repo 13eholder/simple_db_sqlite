@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/zmy/code/project /db_sqlite/build"
+			"value" : "/home/zmy/code/project/db_sqlite/build"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -479,7 +479,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/home/zmy/code/project /db_sqlite"
+			"value" : "/home/zmy/code/project/db_sqlite"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -1015,7 +1015,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/zmy/code/project /db_sqlite/build"
+			"value" : "/home/zmy/code/project/db_sqlite/build"
 		},
 		{
 			"name" : "db_sqlite_SOURCE_DIR",
@@ -1027,7 +1027,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/home/zmy/code/project /db_sqlite"
+			"value" : "/home/zmy/code/project/db_sqlite"
 		}
 	],
 	"kind" : "cache",

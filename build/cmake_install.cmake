@@ -1,4 +1,4 @@
-# Install script for directory: /home/zmy/code/project /db_sqlite
+# Install script for directory: /home/zmy/code/project/db_sqlite
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/zmy/code/project /db_sqlite/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/zmy/code/project/db_sqlite/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

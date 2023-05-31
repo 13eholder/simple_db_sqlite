@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/zmy/code/project /db_sqlite/main.c
+/home/zmy/code/project/db_sqlite/main.c
 stdio.h
 -
 stdlib.h

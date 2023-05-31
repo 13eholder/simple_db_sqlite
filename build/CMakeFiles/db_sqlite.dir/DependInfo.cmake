@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/zmy/code/project /db_sqlite/main.c" "/home/zmy/code/project /db_sqlite/build/CMakeFiles/db_sqlite.dir/main.c.o"
+  "/home/zmy/code/project/db_sqlite/main.c" "/home/zmy/code/project/db_sqlite/build/CMakeFiles/db_sqlite.dir/main.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 

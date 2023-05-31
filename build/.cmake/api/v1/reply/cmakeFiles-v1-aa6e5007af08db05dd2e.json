@@ -96,8 +96,8 @@
 	"kind" : "cmakeFiles",
 	"paths" : 
 	{
-		"build" : "/home/zmy/code/project /db_sqlite/build",
-		"source" : "/home/zmy/code/project /db_sqlite"
+		"build" : "/home/zmy/code/project/db_sqlite/build",
+		"source" : "/home/zmy/code/project/db_sqlite"
 	},
 	"version" : 
 	{
