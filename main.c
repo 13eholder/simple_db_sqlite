@@ -34,6 +34,7 @@ typedef enum{
 //执行结果
 typedef enum{
     EXECUTE_SUCCESS,
+    EXECUTE_DUPLICATE_KEY,
     EXECUTE_TABLE_FULL
 }ExecuteResult;
 typedef enum{
@@ -136,11 +137,14 @@ void* get_page(Pager* pager,u_int32_t page_num);
 void print_row(Row* row);
 //游标
 Cursor* table_start(Table* table);
-Cursor* table_end(Table* table);
+Cursor* table_find(Table* table, u_int32_t key);
 void* cursor_value(Cursor* cursor);
 void cursor_advance(Cursor* cursor);
 //叶节点
 void leaf_node_insert(Cursor* cursor, u_int32_t key, Row* value);
+Cursor* leaf_node_find(Table* table,u_int32_t page_num,u_int32_t key);
+NodeType get_node_type(void* node);
+void set_node_type(void* node,NodeType type);
 //返回叶节点的cell数量
 u_int32_t* leaf_node_num_cells(void* node){
     return node+LEAF_NODE_NUM_CELLS_OFFSET;
@@ -160,6 +164,46 @@ void* leaf_node_value(void* node,u_int32_t cell_num){
 //将叶节点的cell_num 设为0
 void initialize_leaf_node(void* node){
     *leaf_node_num_cells(node)=0;
+    set_node_type(node,NODE_LEAF);
+}
+//使用二分查找寻找指定的key
+// return position of the key
+// return 需要移动的第一个大于该key 的key
+// return 结点尾部
+Cursor* leaf_node_find(Table* table,u_int32_t page_num,u_int32_t key){
+    void* node=get_page(table->pager, page_num);
+    u_int32_t num_cells=*(leaf_node_num_cells(node));
+    Cursor* cursor=malloc(sizeof(Cursor));
+    cursor->table=table;
+    cursor->page_num=page_num;
+
+    //二分查找(左闭右开)
+    u_int32_t min_index=0;
+    u_int32_t past_max_index=num_cells;
+    while (min_index!=past_max_index) {
+        //index为cell_num
+        u_int32_t index=(min_index+past_max_index/2);
+        //找到cell_num 对应的key
+        u_int32_t key_at_index=*(leaf_node_key(node,index));
+        if(key_at_index==key){
+            cursor->cell_num=index;
+            cursor->end_of_table=false;
+            return cursor;
+        }else if (key>key_at_index) {
+            min_index=index+1;
+        }else {
+            past_max_index=index;
+        }
+    }
+    cursor->cell_num=min_index;
+    return cursor;
+}
+NodeType get_node_type(void* node){
+    u_int8_t value=*((u_int8_t*)(node+NODE_TYPE_OFFSET));
+    return (NodeType)value;
+}
+void set_node_type(void* node,NodeType type){
+    *((u_int8_t*)(node+NODE_TYPE_OFFSET))=(u_int8_t)type;
 }
 //TODO 函数定义
 void leaf_node_insert(Cursor* cursor, u_int32_t key, Row* value){
@@ -264,11 +308,19 @@ PrepareResult prepare_statement(InputBuffer* inputBuffer,Statement* statement){
 //解析insert
 ExecuteResult execute_insert(Statement*statement,Table*table){
     void* node=get_page(table->pager, table->root_page_num);
-    if((*leaf_node_num_cells(node))>=LEAF_NODE_MAX_CELLS){
+    u_int32_t num_cells=*leaf_node_num_cells(node);
+    if(num_cells>=LEAF_NODE_MAX_CELLS){
         return EXECUTE_TABLE_FULL;
     }
     Row* row_to_insert=&(statement->row_to_insert);
-    Cursor* cursor=table_end(table);
+    u_int32_t key_to_insert=row_to_insert->id;
+    Cursor*cursor=table_find(table, key_to_insert);
+    if(cursor->cell_num<num_cells){
+        u_int32_t key_at_index=*leaf_node_key(node,cursor->cell_num);
+        if(key_at_index==key_to_insert){
+            return EXECUTE_DUPLICATE_KEY;
+        }
+    }
     leaf_node_insert(cursor,row_to_insert->id,row_to_insert);
     free(cursor);
     return EXECUTE_SUCCESS;
@@ -318,15 +370,15 @@ Cursor* table_start(Table* table){
     cursor->end_of_table=(num_cells==0);
     return cursor;
 }
-//创建一个Cursor,指向表的结尾
-Cursor* table_end(Table* table){
-    Cursor* cursor =malloc(sizeof(Cursor));
-    cursor->table=table;
-    cursor->page_num=table->root_page_num;
-    void* root_node=get_page(table->pager,table->root_page_num);
-    cursor->cell_num=*leaf_node_num_cells(root_node);
-    cursor->end_of_table=true;
-    return cursor;
+Cursor* table_find(Table* table, u_int32_t key){
+    u_int32_t root_page_num=table->root_page_num;
+    void* root_node=get_page(table->pager, root_page_num);
+    if(get_node_type(root_node)==NODE_LEAF){
+        return leaf_node_find(table,root_page_num,key);
+    }else{
+        printf("Need to implement searching an internal node.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 //返回一个 指向当前游标指向行的 指针
 void* cursor_value(Cursor* cursor){
@@ -511,6 +563,9 @@ int main(int argc,char*argv[]) {
         switch (execute_statement(&statement,table)) {
             case EXECUTE_SUCCESS:
                 printf("Executed.\n");
+                break;
+            case EXECUTE_DUPLICATE_KEY:
+                printf("Error: Duplicate key.\n");
                 break;
             case EXECUTE_TABLE_FULL:
                 printf("Error:Table full.\n");
